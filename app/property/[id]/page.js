@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,11 +14,15 @@ import {
   FaShieldAlt, FaBus, FaDumbbell, FaParking, FaBook, FaSnowflake,
   FaChevronLeft, FaChevronRight, FaExpand,
   FaChevronDown, FaChevronUp, FaPlay, FaMap, FaTimes,
-  FaUniversity, FaSubway, FaHospital, FaShoppingBag, FaSearch
+  FaUniversity, FaSubway, FaHospital, FaShoppingBag, FaSearch,
+  FaCheckDouble
 } from 'react-icons/fa';
+import { MdApartment } from 'react-icons/md';
 import { BASE_URL } from '../../../lib/endpoints';
 import { motion, AnimatePresence } from 'framer-motion';
 import MaxWidthWrapper from '../../../app/components/MaxWidthWrapper';
+
+const REAL_API = 'https://api.dreamprovider.in/';
 
 const PropertyDetailPage = () => {
   const router = useRouter();
@@ -40,7 +44,6 @@ const PropertyDetailPage = () => {
   const [isSaved, setIsSaved] = useState(false);
   const [showThumbnails, setShowThumbnails] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isPriceRevealed, setIsPriceRevealed] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   // Nearby Locations State
@@ -49,11 +52,14 @@ const PropertyDetailPage = () => {
   const [showAllNearby, setShowAllNearby] = useState(false);
   const [nearbySearchText, setNearbySearchText] = useState('');
 
-
   // Schedule Visit State
   const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
   const [visitDate, setVisitDate] = useState('');
   const [visitTime, setVisitTime] = useState('');
+
+  // SelectRoom / Pricing Sheet State
+  const [isRoomSheetOpen, setIsRoomSheetOpen] = useState(false);
+  const [selectedOption, setSelectedOption] = useState(null);
 
   const handleConfirmVisit = () => {
     if (!visitDate || !visitTime) {
@@ -94,7 +100,9 @@ const PropertyDetailPage = () => {
     const fetchProperty = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(`https://api.dreamprovider.in/api/properties/${id}?populate=*`);
+        // Deep populate property_pricing.price_json for real pricing data
+        const url = `${REAL_API}api/properties/${id}?populate[0]=property_pricing.price_json&populate[1]=images&populate[2]=genders&populate[3]=facilities&populate[4]=city&populate[5]=location&populate[6]=main_image&populate=*`;
+        const response = await axios.get(url);
         if (!response.data?.data) throw new Error('Property data not found');
         setProperty(response.data.data);
       } catch (err) {
@@ -111,7 +119,7 @@ const PropertyDetailPage = () => {
   const computeHaversineDistance = (lat1, lon1, lat2, lon2) => {
     if (!lat1 || !lon1 || !lat2 || !lon2) return null;
     const toRad = (value) => (value * Math.PI) / 180;
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = toRad(lat2 - lat1);
     const dLon = toRad(lon2 - lon1);
     const a =
@@ -122,37 +130,30 @@ const PropertyDetailPage = () => {
     return R * c;
   };
 
-  // Fetch nearby locations after property loads
   useEffect(() => {
     if (!property) return;
     const cityId = property.attributes?.city?.data?.id;
     if (!cityId) return;
-
     const fetchNearbyLocations = async () => {
       try {
         setNearbyLoading(true);
         const response = await axios.get(
-          `https://api.dreamprovider.in/api/nearby-locations?filters[city][id]=${cityId}&pagination[limit]=50&populate=*`
+          `${REAL_API}api/nearby-locations?filters[city][id]=${cityId}&pagination[limit]=50&populate=*`
         );
         const locations = response.data?.data || [];
-
         const propLat = property.attributes?.latlng?._latitude;
         const propLon = property.attributes?.latlng?._longitude;
-
-        // Compute distance for each location and sort by closest
         const withDistance = locations.map((loc) => {
           const locLat = loc.attributes?.latlng?.latitude;
           const locLon = loc.attributes?.latlng?.longitude;
           const distance = computeHaversineDistance(propLat, propLon, locLat, locLon);
           return { ...loc, distance };
         });
-
         withDistance.sort((a, b) => {
           if (a.distance === null) return 1;
           if (b.distance === null) return -1;
           return a.distance - b.distance;
         });
-
         setNearbyLocations(withDistance);
       } catch (err) {
         console.error('Error fetching nearby locations:', err);
@@ -160,7 +161,6 @@ const PropertyDetailPage = () => {
         setNearbyLoading(false);
       }
     };
-
     fetchNearbyLocations();
   }, [property]);
 
@@ -184,26 +184,28 @@ const PropertyDetailPage = () => {
   }, [user, id, token]);
 
   useEffect(() => {
-    if (!property || isHovered || isFullscreen) return;
-
+    if (!property || isHovered || isFullscreen || isRoomSheetOpen) return;
     const attr = property.attributes;
     const images = [attr.main_image?.data?.attributes?.url, ...(attr.images?.data?.map(img => img.attributes.url) || [])].filter(Boolean);
-
     if (images.length <= 1) return;
-
     const interval = setInterval(() => {
       setCurrentImageIndex((prev) => (prev + 1) % images.length);
     }, 3000);
-
     return () => clearInterval(interval);
-  }, [property, isHovered, isFullscreen]);
-
+  }, [property, isHovered, isFullscreen, isRoomSheetOpen]);
 
   const handleReveal = async (action, callback) => {
     if (!token) {
       if (confirm('Authentication Required. Please sign in to reveal property information.')) {
         router.push('/login');
       }
+      return;
+    }
+    if (action === 'view_price(web)') {
+      if (callback) callback();
+      dispatch(revealProperty(JSON.stringify({
+        data: { property: parseInt(id), users_permissions_user: user?.id, action: action, token: token }
+      }))).catch(() => {});
       return;
     }
     try {
@@ -251,7 +253,6 @@ const PropertyDetailPage = () => {
     }
   };
 
-  // Helper to change image in fullscreen
   const nextImage = (e) => {
     e?.stopPropagation();
     setCurrentImageIndex((prev) => (prev + 1) % galleryImages.length);
@@ -262,16 +263,41 @@ const PropertyDetailPage = () => {
     setCurrentImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
   }
 
+  const handleBookNow = () => {
+    if (!token) {
+      if (confirm('Please sign in to book this property.')) router.push('/login');
+      return;
+    }
+    if (!selectedOption) return;
+    const params = new URLSearchParams({
+      option: encodeURIComponent(JSON.stringify(selectedOption)),
+    });
+    setIsRoomSheetOpen(false);
+    router.push(`/property/${id}/checkout?${params.toString()}`);
+  };
+
+  const handleWhatsAppEnquiry = () => {
+    if (!selectedOption) return;
+    const message = `Hello, I am interested in the ${selectedOption.sharing_name} option of property Id ${id} priced at ₹${selectedOption.price}/${selectedOption.duration}. Can you provide more details?`;
+    window.open(`https://wa.me/917303831326?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
   if (isLoading) return <div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div></div>;
   if (isError || !property) return <div className="min-h-screen flex items-center justify-center bg-gray-50 text-center px-4"><div className="bg-white p-8 rounded-2xl shadow-xl max-w-md"><h1 className="text-2xl font-bold text-gray-800 mb-4">Property Not Found</h1><Link href="/property" className="text-indigo-600 font-semibold hover:underline">Back to Properties</Link></div></div>;
 
   const attr = property.attributes;
   const galleryImages = [attr.main_image?.data?.attributes?.url, ...(attr.images?.data?.map(img => img.attributes.url) || [])].filter(Boolean);
 
+  // Get all pricing options from property_pricing (real data)
+  const pricingGroups = Array.isArray(attr.property_pricing)
+    ? attr.property_pricing
+    : Array.isArray(attr.property_pricing?.data)
+    ? attr.property_pricing.data.map(d => ({ id: d.id, ...d.attributes }))
+    : [];
+
   const PropertyHeaderCard = () => (
     <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl p-6 mb-6 shadow-xl relative overflow-hidden group">
       <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-indigo-500/20 transition-all duration-700"></div>
-
       <div className="relative z-10">
         <div className="flex flex-wrap gap-2 mb-4">
           {attr.genders?.data?.[0] && <span className="bg-blue-500/10 text-blue-600 text-xs font-bold px-3 py-1 rounded-full border border-blue-200">{attr.genders.data[0].attributes.name}</span>}
@@ -282,9 +308,8 @@ const PropertyDetailPage = () => {
           <FaMapMarkerAlt className="mr-2 mt-1 text-indigo-500 shrink-0" />
           <span>{attr.address}</span>
         </div>
-
         <div className="flex justify-around items-center pt-6 border-t border-gray-100/50">
-          {attr.video_url && <ActionButton icon={FaPlay} label="Video Tour" onClick={() => handleReveal('view_video', () => window.open(attr.video_url, '_blank'))} disabled={!attr.video_url} />}
+          {attr.video_url && <ActionButton icon={FaPlay} label="Video Tour" onClick={() => handleReveal('view_video(web)', () => window.open(attr.video_url, '_blank'))} disabled={!attr.video_url} />}
           <ActionButton icon={FaPhoneAlt} label="Call Owner" onClick={() => handleReveal('call_owner(web)', () => window.location.href = `tel:${attr.owner_number}`)} />
           <ActionButton icon={FaMap} label="Get Directions" onClick={() => handleReveal('view_map(web)', handleOpenMap)} />
         </div>
@@ -301,21 +326,14 @@ const PropertyDetailPage = () => {
     </button>
   );
 
-  // Helper: Icon and color for nearby location type
   const getLocationTypeConfig = (type) => {
     switch (type) {
-      case 'college':
-        return { icon: FaUniversity, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', badge: 'bg-blue-100 text-blue-700' };
-      case 'metro':
-        return { icon: FaSubway, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-700' };
-      case 'bus_stop':
-        return { icon: FaBus, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100', badge: 'bg-orange-100 text-orange-700' };
-      case 'hospital':
-        return { icon: FaHospital, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', badge: 'bg-red-100 text-red-700' };
-      case 'market':
-        return { icon: FaShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700' };
-      default:
-        return { icon: FaMapMarkerAlt, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', badge: 'bg-indigo-100 text-indigo-700' };
+      case 'college': return { icon: FaUniversity, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', badge: 'bg-blue-100 text-blue-700' };
+      case 'metro': return { icon: FaSubway, color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', badge: 'bg-purple-100 text-purple-700' };
+      case 'bus_stop': return { icon: FaBus, color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-100', badge: 'bg-orange-100 text-orange-700' };
+      case 'hospital': return { icon: FaHospital, color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-100', badge: 'bg-red-100 text-red-700' };
+      case 'market': return { icon: FaShoppingBag, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', badge: 'bg-emerald-100 text-emerald-700' };
+      default: return { icon: FaMapMarkerAlt, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100', badge: 'bg-indigo-100 text-indigo-700' };
     }
   };
 
@@ -366,34 +384,23 @@ const PropertyDetailPage = () => {
             />
           </div>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {displayed.map((loc) => {
             const config = getLocationTypeConfig(loc.attributes?.type);
             const Icon = config.icon;
-            const typeName = loc.attributes?.type
-              ? loc.attributes.type.replace('_', ' ')
-              : 'Location';
-
+            const typeName = loc.attributes?.type ? loc.attributes.type.replace('_', ' ') : 'Location';
             return (
-              <div
-                key={loc.id}
-                className={`flex items-center gap-3 p-3 rounded-xl ${config.bg} border ${config.border} hover:shadow-md transition-all duration-200 group/loc`}
-              >
+              <div key={loc.id} className={`flex items-center gap-3 p-3 rounded-xl ${config.bg} border ${config.border} hover:shadow-md transition-all duration-200 group/loc`}>
                 <div className={`w-10 h-10 rounded-xl bg-white shadow-sm flex items-center justify-center ${config.color} group-hover/loc:scale-110 transition-transform duration-200`}>
                   <Icon size={16} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-gray-800 truncate">{loc.attributes?.name}</p>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase ${config.badge}`}>
-                      {typeName}
-                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase ${config.badge}`}>{typeName}</span>
                     {loc.distance !== null && (
                       <span className="text-xs font-semibold text-gray-500">
-                        {loc.distance < 1
-                          ? `${Math.round(loc.distance * 1000)} m`
-                          : `${loc.distance.toFixed(1)} km`}
+                        {loc.distance < 1 ? `${Math.round(loc.distance * 1000)} m` : `${loc.distance.toFixed(1)} km`}
                       </span>
                     )}
                   </div>
@@ -402,63 +409,71 @@ const PropertyDetailPage = () => {
             );
           })}
         </div>
-
-        {filtered.length === 0 && (
-          <p className="text-center text-gray-400 text-sm py-6">No locations match your search.</p>
-        )}
-
+        {filtered.length === 0 && (<p className="text-center text-gray-400 text-sm py-6">No locations match your search.</p>)}
         {hasMore && (
-          <button
-            onClick={() => setShowAllNearby(!showAllNearby)}
-            className="mt-4 w-full py-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 text-sm font-bold text-gray-600 hover:text-indigo-600 transition-all flex items-center justify-center gap-2"
-          >
-            {showAllNearby ? (
-              <><FaChevronUp size={10} /> Show Less</>
-            ) : (
-              <><FaChevronDown size={10} /> Show All {filtered.length} Locations</>
-            )}
+          <button onClick={() => setShowAllNearby(!showAllNearby)} className="mt-4 w-full py-2.5 rounded-xl border border-gray-200 bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200 text-sm font-bold text-gray-600 hover:text-indigo-600 transition-all flex items-center justify-center gap-2">
+            {showAllNearby ? <><FaChevronUp size={10} /> Show Less</> : <><FaChevronDown size={10} /> Show All {filtered.length} Locations</>}
           </button>
         )}
       </div>
     );
   };
 
-  const PropertyPriceReveal = () => {
-    const [isOpen, setIsOpen] = useState(false);
+  // SelectRoom Pricing Section (replaces old PropertyPriceReveal)
+  const PricingSelectButton = () => {
+    const hasPricing = pricingGroups.length > 0 && pricingGroups.some(g => g.price_json?.length > 0);
+
+    if (!hasPricing) {
+      // Fallback for properties with no price_json
+      return (
+        <div className="bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg overflow-hidden mb-6 p-6">
+          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-3">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>Pricing
+          </h3>
+          <p className="text-gray-500 text-sm">Contact us for pricing details.</p>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg overflow-hidden mb-6">
-        <button onClick={() => { if (!isPriceRevealed) handleReveal('view_price(web)', () => { setIsPriceRevealed(true); setIsOpen(true); }); else setIsOpen(!isOpen); }} className="w-full flex justify-between items-center p-6 bg-transparent hover:bg-white/50 transition-colors">
-          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2"><div className="w-1 h-6 bg-emerald-500 rounded-full"></div>Pricing Details</h3>
-          {isOpen ? <FaChevronUp className="text-gray-400" /> : <FaChevronDown className="text-gray-400" />}
-        </button>
-        <div className={`transition-all duration-300 ease-in-out overflow-hidden ${isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-          <div className="p-6 pt-0">
-            <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50 text-center">
-              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2">Monthly Rent</p>
-              <div className="flex flex-col items-center gap-2">
-                {Array.isArray(attr.price) && attr.price.length > 0 ? (
-                  attr.price.map((p, idx) => (
-                    <div key={idx} className="flex flex-col items-center w-full py-2 border-b border-emerald-200/50 last:border-0">
-                      <span className="text-3xl font-black text-emerald-900">₹{parseInt(p.price).toLocaleString('en-IN')}</span>
-                      <span className="text-sm text-emerald-700 font-bold bg-emerald-100 px-2 py-0.5 rounded-md mt-1">{p.value} {p.duration}</span>
-                    </div>
-                  ))
-                ) : <span className="text-3xl font-black text-emerald-900">₹{attr.price ? attr.price.toLocaleString('en-IN') : 'N/A'}</span>}
-              </div>
-            </div>
+        <div className="p-6">
+          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2 mb-4">
+            <div className="w-1 h-6 bg-emerald-500 rounded-full"></div>Pricing & Room Selection
+          </h3>
+          {/* Quick pricing preview */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+            {pricingGroups.slice(0, 4).map((group) => {
+              const firstOption = group.price_json?.[0];
+              if (!firstOption) return null;
+              return (
+                <div key={group.id} className="flex items-center justify-between bg-emerald-50 border border-emerald-100 rounded-xl px-3 py-2">
+                  <span className="text-sm font-bold text-emerald-800">{group.name}</span>
+                  <span className="text-sm font-black text-emerald-700">
+                    from ₹{parseInt(firstOption.price || 0).toLocaleString('en-IN')}
+                    <span className="text-xs font-normal">/{firstOption.duration}</span>
+                  </span>
+                </div>
+              );
+            })}
           </div>
+          <button
+            onClick={() => handleReveal('view_price(web)', () => setIsRoomSheetOpen(true))}
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 text-white rounded-2xl font-bold text-sm shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 transition-all duration-200 active:scale-95"
+          >
+            <MdApartment size={18} />
+            View Rooms & Pricing
+          </button>
         </div>
       </div>
     );
   };
 
-  // Restored Schedule Visit Component
   const ScheduleVisitCard = ({ mobile = false }) => (
     <div className={`${mobile ? 'block' : 'hidden lg:block'} bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg p-6`}>
       <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center">
         <FaCheckCircle className="mr-2 text-indigo-500" /> Schedule a Visit
       </h3>
-
       <div className="space-y-4">
         <div>
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Select Date</label>
@@ -477,7 +492,6 @@ const PropertyDetailPage = () => {
             })}
           </div>
         </div>
-
         <div>
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Select Time</label>
           <div className="grid grid-cols-3 gap-2">
@@ -488,7 +502,6 @@ const PropertyDetailPage = () => {
             ))}
           </div>
         </div>
-
         <button onClick={handleConfirmVisit} disabled={!visitDate || !visitTime} className={`w-full py-3 text-sm font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 ${!visitDate || !visitTime ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-green-200'}`}>
           <FaWhatsapp size={18} /> Confirm via WhatsApp
         </button>
@@ -516,13 +529,9 @@ const PropertyDetailPage = () => {
                 <div className="h-[50vh] sm:h-[65vh] relative cursor-pointer" onClick={() => setShowThumbnails(!showThumbnails)}>
                   <Image src={galleryImages[currentImageIndex]} alt={attr.name} fill className="object-cover transition-transform duration-700 group-hover:scale-105" priority />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30 pointer-events-none"></div>
-
-                  {/* Watermark Restored */}
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                     <span className="text-white text-5xl sm:text-7xl font-bold opacity-10 select-none transform -rotate-12">Provider App</span>
                   </div>
-
-                  {/* Controls Overlay */}
                   <div className="absolute top-4 left-4 z-20"><button onClick={(e) => { e.stopPropagation(); router.back() }} className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all"><FaArrowLeft /></button></div>
                   <div className="absolute top-4 right-4 z-20 flex gap-3">
                     <button onClick={(e) => { e.stopPropagation(); handleToggleSave() }} className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all">{isSaved ? <FaHeart className="text-red-500" /> : <FaRegHeart />}</button>
@@ -531,7 +540,7 @@ const PropertyDetailPage = () => {
                   <div className="absolute bottom-4 right-4 z-20"><button onClick={(e) => { e.stopPropagation(); setIsFullscreen(true) }} className="p-3 bg-white/20 backdrop-blur-md rounded-full text-white hover:bg-white/40 transition-all"><FaExpand /></button></div>
                 </div>
                 {showThumbnails && (
-                  <div className="absolute bottom-4 left-4 right-16 flex gap-2 overflow-x-auto pb-2 scrollbar-hide z-20 px-2 mask-linear">
+                  <div className="absolute bottom-4 left-4 right-16 flex gap-2 overflow-x-auto pb-2 scrollbar-hide z-20 px-2">
                     {galleryImages.map((img, idx) => (
                       <button key={idx} onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(idx) }} className={`relative w-16 h-16 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${idx === currentImageIndex ? 'border-white scale-110 shadow-lg' : 'border-white/50 opacity-70'}`}>
                         <Image src={img} alt="thumb" fill className="object-cover" />
@@ -541,11 +550,10 @@ const PropertyDetailPage = () => {
                 )}
               </div>
 
-              {/* Mobile Layout Order Handling */}
+              {/* Mobile Layout */}
               <div className="block lg:hidden space-y-6">
                 <PropertyHeaderCard />
-                <PropertyPriceReveal />
-                {/* Mobile Schedule Visit Button that opens modal */}
+                <PricingSelectButton />
                 <button onClick={() => setIsVisitModalOpen(true)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-xl shadow-indigo-300 transform active:scale-95 transition-all">
                   Schedule a Visit
                 </button>
@@ -573,24 +581,17 @@ const PropertyDetailPage = () => {
                 </div>
               </div>
 
-              {/* What's Nearby */}
               <NearbyLocationsCard />
             </div>
 
-            {/* Right Column: Sticky Sidebar */}
             {/* Right Column: Sidebar */}
             <div className="hidden lg:block lg:col-span-1 space-y-6">
-              {/* Non-Sticky Part */}
               <div className="space-y-6">
                 <PropertyHeaderCard />
-                <PropertyPriceReveal />
+                <PricingSelectButton />
               </div>
-
-              {/* Sticky Part */}
               <div className="sticky top-24 space-y-6 z-1000">
                 <ScheduleVisitCard />
-
-                {/* Quick Details Card */}
                 <div className="bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Details</h3>
                   <div className="space-y-4">
@@ -625,61 +626,171 @@ const PropertyDetailPage = () => {
         )}
       </AnimatePresence>
 
-      {/* Restored & Fixed Fullscreen Image Modal */}
+      {/* =================== SELECT ROOM BOTTOM SHEET =================== */}
+      <AnimatePresence>
+        {isRoomSheetOpen && (
+          <div className="fixed inset-0 z-[200] flex items-end">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setIsRoomSheetOpen(false)}
+            />
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 28, stiffness: 320 }}
+              className="relative w-full max-h-[88vh] bg-white rounded-t-[28px] flex flex-col shadow-2xl overflow-hidden"
+            >
+              {/* Drag Handle */}
+              <div className="flex-shrink-0 pt-3 pb-4 px-6 border-b border-gray-100">
+                <div className="w-10 h-1 bg-gray-300 rounded-full mx-auto mb-4" />
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-black text-gray-900">Select Room & Pricing</h2>
+                    <p className="text-sm text-gray-500 mt-0.5">{attr.name}</p>
+                  </div>
+                  <button onClick={() => setIsRoomSheetOpen(false)} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors">
+                    <FaTimes className="text-gray-600" size={16} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto px-4 py-4 pb-32 space-y-6">
+                {pricingGroups.map((group) => {
+                  if (!group.price_json || group.price_json.length === 0) return null;
+                  return (
+                    <div key={group.id}>
+                      {/* Group Header */}
+                      <div className="flex items-center gap-2 mb-3 px-1">
+                        <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
+                        <span className="text-sm font-black text-gray-700 uppercase tracking-wider">{group.name}</span>
+                      </div>
+                      {/* Option Cards */}
+                      <div className="space-y-3">
+                        {group.price_json.map((option) => {
+                          const isSelected = selectedOption?.id === option.id;
+                          return (
+                            <button
+                              key={option.id}
+                              onClick={() => setSelectedOption(option)}
+                              className={`w-full text-left rounded-2xl border-2 p-4 transition-all duration-200 ${
+                                isSelected
+                                  ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                                  : 'border-gray-100 bg-white hover:border-indigo-200 hover:shadow-sm'
+                              }`}
+                            >
+                              {/* Card Header */}
+                              <div className="flex items-start justify-between mb-3">
+                                <div>
+                                  <p className="text-base font-black text-gray-900">{option.sharing_name}</p>
+                                  <span className="inline-block mt-1 text-[10px] font-bold px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 uppercase tracking-wide">
+                                    {attr.property_types === 'Flat' ? 'Per BHK' : 'Per Bed'}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <p className="text-2xl font-black text-gray-900">₹{parseInt(option.price || 0).toLocaleString('en-IN')}</p>
+                                  <p className="text-xs text-gray-500 font-medium">/{option.duration}</p>
+                                </div>
+                              </div>
+
+                              {/* Divider */}
+                              <div className="h-px bg-gray-100 mb-3" />
+
+                              {/* Details */}
+                              <div className="space-y-1.5">
+                                {option.deposit_amount && (
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <FaShieldAlt size={11} className="text-gray-400 flex-shrink-0" />
+                                    <span>Security Deposit: <strong>₹{option.deposit_amount}</strong> ({option.refundable ? 'Refundable' : 'Non-Refundable'})</span>
+                                  </div>
+                                )}
+                                {option.transportation_charge && (
+                                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                                    <FaBus size={11} className="text-gray-400 flex-shrink-0" />
+                                    <span>Transport: <strong>₹{option.transportation_charge}</strong>/{option.transportation_duration}</span>
+                                  </div>
+                                )}
+                                {option.description && (
+                                  <div className="flex items-start gap-2 text-sm text-gray-600">
+                                    <FaCheckDouble size={11} className="text-gray-400 flex-shrink-0 mt-0.5" />
+                                    <span>{option.description}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Select indicator */}
+                              <div className={`mt-3 flex items-center gap-2 text-sm font-bold ${isSelected ? 'text-indigo-600' : 'text-gray-400'}`}>
+                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-colors ${isSelected ? 'border-indigo-500 bg-indigo-500' : 'border-gray-300'}`}>
+                                  {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                                </div>
+                                {isSelected ? 'Selected' : 'Select this option'}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Fixed Bottom Bar */}
+              <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-4 py-4 flex gap-3 shadow-[0_-8px_32px_rgba(0,0,0,0.08)]">
+                <button
+                  onClick={handleWhatsAppEnquiry}
+                  disabled={!selectedOption}
+                  className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
+                    selectedOption ? 'bg-[#25D366] text-white shadow-md shadow-green-200 hover:bg-[#20bd5a] active:scale-95' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                  title="WhatsApp Enquiry"
+                >
+                  <FaWhatsapp size={20} />
+                </button>
+                <button
+                  onClick={handleBookNow}
+                  disabled={!selectedOption}
+                  className={`flex-1 py-3.5 rounded-xl font-black text-base transition-all flex items-center justify-center gap-2 ${
+                    selectedOption
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-95'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {selectedOption
+                    ? `Book Now — ₹${(attr.booking_amount || 0).toLocaleString('en-IN')}`
+                    : 'Select a Room to Continue'
+                  }
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Fullscreen Image Modal */}
       <AnimatePresence>
         {isFullscreen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-black flex items-center justify-center transition-all duration-300" // Highest z-index
+            className="fixed inset-0 z-[9999] bg-black flex items-center justify-center"
             onClick={() => setIsFullscreen(false)}
           >
-            {/* Close Button - Enhanced Visibility */}
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsFullscreen(false); }}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-[10002] backdrop-blur-md shadow-lg"
-              aria-label="Close"
-            >
+            <button onClick={(e) => { e.stopPropagation(); setIsFullscreen(false); }} className="absolute top-4 right-4 sm:top-6 sm:right-6 p-4 bg-white/10 hover:bg-white/20 rounded-full text-white transition-all z-[10002] backdrop-blur-md shadow-lg">
               <FaTimes size={28} />
             </button>
-
             <div className="relative w-full h-full flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
-              {/* Navigation Buttons - Enhanced */}
-              <button
-                onClick={prevImage}
-                className="absolute left-2 sm:left-6 p-4 text-white hover:bg-white/10 rounded-full transition-all z-[10001]"
-              >
-                <FaChevronLeft size={32} />
-              </button>
-              <button
-                onClick={nextImage}
-                className="absolute right-2 sm:right-6 p-4 text-white hover:bg-white/10 rounded-full transition-all z-[10001]"
-              >
-                <FaChevronRight size={32} />
-              </button>
-
+              <button onClick={prevImage} className="absolute left-2 sm:left-6 p-4 text-white hover:bg-white/10 rounded-full transition-all z-[10001]"><FaChevronLeft size={32} /></button>
+              <button onClick={nextImage} className="absolute right-2 sm:right-6 p-4 text-white hover:bg-white/10 rounded-full transition-all z-[10001]"><FaChevronRight size={32} /></button>
               <div className="relative w-full h-[80vh] sm:h-[85vh]">
-                <Image
-                  src={galleryImages[currentImageIndex]}
-                  alt="Full"
-                  fill
-                  className="object-contain select-none"
-                  priority
-                  quality={100}
-                />
-                {/* Watermark in Fullscreen */}
+                <Image src={galleryImages[currentImageIndex]} alt="Full" fill className="object-contain select-none" priority quality={100} />
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[10000]">
                   <span className="text-white/10 text-5xl sm:text-8xl font-black transform -rotate-45 select-none whitespace-nowrap">Provider App</span>
                 </div>
               </div>
-
-              {/* Thumbnail Strip in Fullscreen */}
-              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 overflow-x-auto px-4 z-[10002] no-scrollbar py-2" onClick={(e) => e.stopPropagation()}>
+              <div className="absolute bottom-6 left-0 right-0 flex justify-center gap-3 overflow-x-auto px-4 z-[10002] py-2" onClick={(e) => e.stopPropagation()}>
                 {galleryImages.map((img, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentImageIndex(idx)}
-                    className={`relative w-14 h-14 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${idx === currentImageIndex ? 'border-white scale-110 shadow-2xl' : 'border-white/30 opacity-60 hover:opacity-100'}`}
-                  >
+                  <button key={idx} onClick={() => setCurrentImageIndex(idx)} className={`relative w-14 h-14 sm:w-20 sm:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 ${idx === currentImageIndex ? 'border-white scale-110 shadow-2xl' : 'border-white/30 opacity-60 hover:opacity-100'}`}>
                     <Image src={img} alt="thumb" fill className="object-cover" />
                   </button>
                 ))}

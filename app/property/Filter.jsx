@@ -96,7 +96,7 @@ const Filter = ({
   const glassInputClass = "w-full appearance-none pl-10 pr-8 py-3.5 text-sm text-gray-800 bg-white/50 backdrop-blur-sm border border-white/40 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 focus:bg-white/80 transition-all placeholder:text-gray-500";
 
   return (
-    <div className="bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl rounded-2xl mx-auto max-w-6xl -mt-20 relative z-20 overflow-hidden">
+    <div className="bg-white/20 backdrop-blur-xl border border-white/30 shadow-2xl rounded-2xl mx-auto max-w-6xl -mt-10 sm:-mt-20 relative z-20 overflow-hidden">
       {/* Search Header */}
       <div className="px-6 py-5 bg-gradient-to-r from-white/40 to-white/10 border-b border-white/20 flex flex-col sm:flex-row justify-between items-center gap-4">
         <div className="flex items-center space-x-2">

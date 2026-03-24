@@ -146,7 +146,7 @@ const StudentTestimonials = () => {
           <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
             <defs>
               <pattern id="dots" width="20" height="20" patternUnits="userSpaceOnUse">
-                <circle cx="2" cy="2" r="1" fill="#6366f1"/>
+                <circle cx="2" cy="2" r="1" fill="#6366f1" />
               </pattern>
             </defs>
             <rect width="100%" height="100%" fill="url(#dots)" />
@@ -171,13 +171,14 @@ const StudentTestimonials = () => {
               <div className="bg-white p-6 rounded-2xl shadow-lg w-full flex flex-col border border-blue-100">
                 <div className="aspect-w-16 aspect-h-9 mb-4 rounded-xl overflow-hidden">
                   <iframe
-                    src={`https://www.youtube.com/embed/8Q9o2Tp3epQ?si=kXw-9GsMjOlWJ8ql?rel=0`}
+                    src="https://www.youtube.com/embed/8Q9o2Tp3epQ?rel=0&modestbranding=1&controls=0&showinfo=0&disablekb=1&fs=0&iv_load_policy=3&playsinline=1&enablejsapi=1"
                     title={`${videoTestimonial.name}'s Testimonial Video`}
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    allowFullScreen
+                    allowFullScreen={false}
                     className="rounded-xl w-full h-full"
-                  ></iframe>
+                  />
+
                 </div>
                 <div className="flex items-center mb-2">
                   {videoTestimonial.photoUrl ? (
