@@ -19,33 +19,33 @@ const Hero = () => {
     setIsMounted(true);
     setIsLoaded(true);
 
-    const tl = gsap.timeline({ 
+    const tl = gsap.timeline({
       defaults: { ease: 'power3.out', duration: 1.2 }
     });
 
     if (textRef.current?.children) {
-      tl.from(textRef.current.children, { 
-        opacity: 0, 
-        y: 60, 
+      tl.from(textRef.current.children, {
+        opacity: 0,
+        y: 60,
         stagger: 0.15,
-        clearProps: "all" 
+        clearProps: "all"
       });
     }
 
     if (statsRef.current?.children) {
-      tl.from(statsRef.current.children, { 
-        opacity: 0, 
-        y: 40, 
-        scale: 0.8, 
+      tl.from(statsRef.current.children, {
+        opacity: 0,
+        y: 40,
+        scale: 0.8,
         stagger: 0.1,
         clearProps: "all"
       }, '-=0.6');
     }
 
     if (imageContainerRef.current) {
-      tl.from(imageContainerRef.current, { 
-        opacity: 0, 
-        scale: 0.85, 
+      tl.from(imageContainerRef.current, {
+        opacity: 0,
+        scale: 0.85,
         rotation: 3,
         clearProps: "all"
       }, '-=0.8');
@@ -140,7 +140,7 @@ const Hero = () => {
         <div className="parallax-bg absolute top-40 right-20 w-32 h-32 bg-gradient-to-br from-purple-200/30 to-pink-300/40 rounded-full blur-2xl transform transition-transform duration-300"></div>
         <div className="parallax-bg absolute bottom-40 left-1/4 w-24 h-24 bg-gradient-to-br from-cyan-200/40 to-blue-400/30 rounded-full blur-xl transform transition-transform duration-300"></div>
         <div className="parallax-bg absolute top-1/3 right-1/3 w-16 h-16 bg-gradient-to-br from-indigo-300/50 to-purple-400/40 rounded-full blur-lg transform transition-transform duration-300"></div>
-        
+
         {/* New animated elements */}
         <div className="parallax-bg absolute top-1/2 left-1/3 w-28 h-28 bg-gradient-to-br from-green-200/30 to-teal-300/40 rounded-full blur-xl animate-pulse"></div>
         <div className="parallax-bg absolute bottom-1/4 right-1/4 w-36 h-36 bg-gradient-to-br from-orange-200/30 to-red-300/40 rounded-full blur-2xl animate-pulse"></div>
@@ -151,24 +151,24 @@ const Hero = () => {
         <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
           <defs>
             <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
-              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.5"/>
+              <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" strokeWidth="0.5" />
             </pattern>
             <linearGradient id="gridGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="currentColor" stopOpacity="0.1"/>
-              <stop offset="100%" stopColor="currentColor" stopOpacity="0.3"/>
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0.1" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0.3" />
             </linearGradient>
           </defs>
           <rect width="100%" height="100%" fill="url(#grid)" />
         </svg>
       </div>
-      
+
       <section className="relative pt-0 pb-12 md:pb-16">
         <div className="container mx-auto px-4 md:px-6 max-w-7xl">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-            
+
             {/* Left Content */}
             <div ref={textRef} className="relative z-10 space-y-6">
-              
+
               {/* Enhanced Badge */}
               <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-200/50 rounded-full backdrop-blur-sm hover:scale-105 transition-transform duration-300 mt-4">
                 <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
@@ -176,24 +176,24 @@ const Hero = () => {
                   🏠 India's #1 Student Housing Platform
                 </span>
               </div>
-              
+
               {/* Main Heading with enhanced animation */}
               <div className="space-y-3">
                 <h1 className="text-4xl md:text-6xl lg:text-7xl font-black leading-[0.9] tracking-tight">
                   <span className="block bg-gradient-to-r from-gray-900 via-blue-800 to-indigo-900 bg-clip-text text-transparent hover:scale-105 transition-transform duration-300">
-                 </span>
-                  
+                  </span>
+
                 </h1>
-                
+
                 <div className="w-20 h-1 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full hover:w-28 transition-all duration-300"></div>
               </div>
-              
+
               {/* Enhanced Subtitle */}
               <div className="space-y-3 max-w-2xl">
                 {/* <h2 className="text-lg md:text-xl lg:text-2xl font-semibold text-gray-700 leading-relaxed hover:text-blue-600 transition-colors duration-300">
                   Discover Verified Hostels, PGs & Flats Near Your College
                 </h2> */}
-                
+
                 <div className="flex flex-wrap items-center gap-2 text-base md:text-lg font-medium">
                   <span className="text-gray-600">Find</span>
                   <span className="px-3 py-1.5 bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 rounded-lg font-semibold hover:scale-110 hover:shadow-lg transition-all duration-300">
@@ -208,7 +208,7 @@ const Hero = () => {
                   <span className="text-gray-600 font-semibold">& More</span>
                 </div>
               </div>
-              
+
               {/* Enhanced Description */}
               <div className="space-y-3 text-base md:text-lg text-gray-600 leading-relaxed max-w-xl">
                 <div className="relative">
@@ -221,10 +221,10 @@ const Hero = () => {
                 <div className="flex items-center gap-2">
                   <span>trusted by</span>
                   <span className="font-black text-xl bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent hover:scale-110 transition-transform duration-300">
-                    <CountUp 
-                      end={50000} 
-                      duration={1.5} 
-                      separator="," 
+                    <CountUp
+                      end={50000}
+                      duration={1.5}
+                      separator=","
                       enableScrollSpy={false}
                       startOnMount={true}
                     />+
@@ -233,10 +233,10 @@ const Hero = () => {
                   <span className="text-xl animate-bounce">🎉</span>
                 </div>
               </div>
-              
+
               {/* Enhanced CTA Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-2 items-center sm:items-start justify-center sm:justify-start">
-                <button 
+                <button
                   type="button"
                   onClick={handleDownloadApp}
                   suppressHydrationWarning
@@ -254,15 +254,16 @@ const Hero = () => {
               <div className="flex flex-col md:flex-row gap-6 mt-6 items-center">
                 {/* YouTube Video */}
                 <div className="w-full md:w-[380px] aspect-video rounded-2xl overflow-hidden shadow-lg border border-gray-200">
-                  <iframe
+                  {/* <iframe
                     width="100%"
                     height="100%"
-                    src="https://www.youtube.com/embed/lINMiZrwbS0?si=ll3CxA54WA2R75SO&autoplay=1"
+       s             src="https://www.youtube.com/embed/lINMiZrwbS0?si=ll3CxA54WA2R75SO&autoplay=1"
                     title="YouTube video player"
                     frameBorder="0"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                     allowFullScreen
-                  ></iframe>
+                  ></iframe> */}
+                  <video src="https://cdn.dreamprovider.in/video/showcase.mp4" autoPlay loop muted />
                 </div>
                 {/* Feature Boxes */}
                 <div className="flex flex-col gap-4 w-full md:w-auto">
@@ -300,14 +301,14 @@ const Hero = () => {
                 {/* Enhanced Decorative Elements */}
                 <div className="absolute -top-8 -right-8 w-40 h-40 bg-gradient-to-br from-blue-200/60 to-indigo-300/60 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-gradient-to-br from-purple-200/50 to-pink-300/50 rounded-full blur-3xl"></div>
-                
+
                 {/* Enhanced Main Image Container */}
                 <div className="relative">
                   {/* Enhanced Glassmorphism Frame */}
                   <div className="relative aspect-square bg-white/60 backdrop-blur-xl rounded-[2.5rem] border border-white/50 shadow-2xl overflow-hidden p-6 hover:shadow-3xl transition-all duration-300">
                     {/* Enhanced inner gradient overlay */}
                     <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-blue-50/30 to-indigo-100/40 rounded-[2rem] animate-gradient"></div>
-                    
+
                     <div className="relative w-full h-full rounded-[1.5rem] overflow-hidden shadow-xl">
                       <Image
                         src="/hero.png"
@@ -318,7 +319,7 @@ const Hero = () => {
                         className="rounded-[1.5rem] hover:scale-110 transition-transform duration-700"
                       />
                     </div>
-                    
+
                     {/* Enhanced Floating UI Elements */}
                     {/* <div className="absolute top-8 right-8 w-16 h-16 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center shadow-lg animate-bounce hover:scale-110 transition-transform duration-300">
                       <span className="text-white text-xl font-bold">✓</span>
@@ -327,7 +328,7 @@ const Hero = () => {
                 </div>
               </div>
             </div>
-            
+
           </div>
 
           {/* Enhanced Stats Section */}
@@ -338,7 +339,7 @@ const Hero = () => {
               </h3>
               <p className="text-gray-600">Join thousands of students who found their perfect accommodation</p>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto" ref={statsRef}>
               <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-green-200/50 to-emerald-300/50 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
@@ -350,10 +351,10 @@ const Hero = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-4xl md:text-5xl font-black text-gray-900 mb-2">
-                      <CountUp 
-                        end={50000} 
-                        duration={1.5} 
-                        separator="," 
+                      <CountUp
+                        end={50000}
+                        duration={1.5}
+                        separator=","
                         enableScrollSpy={true}
                         scrollSpyOnce={true}
                         scrollSpyDelay={200}
@@ -365,7 +366,7 @@ const Hero = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-200/50 to-indigo-300/50 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
                 <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2">
@@ -376,10 +377,10 @@ const Hero = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-4xl md:text-5xl font-black text-gray-900 mb-2">
-                      <CountUp 
-                        end={40000} 
-                        duration={1.5} 
-                        separator="," 
+                      <CountUp
+                        end={40000}
+                        duration={1.5}
+                        separator=","
                         enableScrollSpy={true}
                         scrollSpyOnce={true}
                         scrollSpyDelay={200}
@@ -391,7 +392,7 @@ const Hero = () => {
                   </div>
                 </div>
               </div>
-              
+
               <div className="group relative">
                 <div className="absolute inset-0 bg-gradient-to-r from-purple-200/50 to-pink-300/50 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-300"></div>
                 <div className="relative bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-300 transform group-hover:-translate-y-2">
@@ -402,10 +403,10 @@ const Hero = () => {
                   </div>
                   <div className="text-center">
                     <p className="text-4xl md:text-5xl font-black text-gray-900 mb-2">
-                      <CountUp 
-                        end={10000} 
-                        duration={1.5} 
-                        separator="," 
+                      <CountUp
+                        end={10000}
+                        duration={1.5}
+                        separator=","
                         enableScrollSpy={true}
                         scrollSpyOnce={true}
                         scrollSpyDelay={200}

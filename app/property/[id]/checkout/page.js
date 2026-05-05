@@ -35,6 +35,32 @@ const loadRazorpay = () => {
   });
 };
 
+// ── InputField must be defined OUTSIDE the parent component so React never
+//    remounts it on re-renders (which would steal focus after each keystroke).
+const InputField = ({ label, name, value, error, onChange, type = 'text', placeholder, readOnly = false, maxLength }) => (
+  <div>
+    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
+      {label} <span className="text-red-500 normal-case font-normal">*</span>
+    </label>
+    <input
+      type={type}
+      value={value}
+      onChange={(e) => onChange(name, e.target.value)}
+      placeholder={placeholder}
+      readOnly={readOnly}
+      maxLength={maxLength}
+      className={`w-full px-4 py-3 rounded-xl border text-sm transition-all outline-none ${
+        error
+          ? 'border-red-300 bg-red-50 text-red-900 focus:ring-2 focus:ring-red-200'
+          : readOnly
+          ? 'border-gray-100 bg-gray-50 text-gray-500 cursor-default'
+          : 'border-gray-200 bg-white text-gray-900 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100'
+      }`}
+    />
+    {error && <p className="text-xs text-red-500 mt-1 font-medium">{error}</p>}
+  </div>
+);
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { id } = useParams();
@@ -340,29 +366,7 @@ export default function CheckoutPage() {
   const netRent = getNetRent();
   const totalPackageValue = totalRent + parseInt(pricing.deposit_amount || 0) + parseInt(pricing.transportation_charge || 0);
 
-  const InputField = ({ label, name, type = 'text', placeholder, readOnly = false, maxLength, keyboardType }) => (
-    <div>
-      <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">
-        {label} <span className="text-red-500 normal-case font-normal">*</span>
-      </label>
-      <input
-        type={type || 'text'}
-        value={formData[name]}
-        onChange={(e) => handleInputChange(name, e.target.value)}
-        placeholder={placeholder}
-        readOnly={readOnly}
-        maxLength={maxLength}
-        className={`w-full px-4 py-3 rounded-xl border text-sm transition-all outline-none ${
-          formErrors[name]
-            ? 'border-red-300 bg-red-50 text-red-900 focus:ring-2 focus:ring-red-200'
-            : readOnly
-            ? 'border-gray-100 bg-gray-50 text-gray-500 cursor-default'
-            : 'border-gray-200 bg-white text-gray-900 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100'
-        }`}
-      />
-      {formErrors[name] && <p className="text-xs text-red-500 mt-1 font-medium">{formErrors[name]}</p>}
-    </div>
-  );
+  // InputField is module-scoped (above) — do not redeclare here.
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/20">
@@ -520,12 +524,12 @@ export default function CheckoutPage() {
                 className="overflow-hidden"
               >
                 <div className="px-5 py-4 space-y-4">
-                  <InputField label="Full Name" name="name" placeholder="Your full name" readOnly={!!user?.full_name} />
-                  <InputField label="Phone Number" name="phone" type="tel" placeholder="10-digit number" maxLength={10} readOnly={!!user?.username} />
-                  <InputField label="Father's Name" name="fatherName" placeholder="Father's full name" />
-                  <InputField label="Father's Mobile Number" name="fatherNumber" type="tel" placeholder="10-digit number" maxLength={10} />
-                  <InputField label="College Name" name="college" placeholder="Your college / institute" />
-                  <InputField label="Course Name" name="course" placeholder="Your course (e.g. B.Tech, MBA)" />
+                  <InputField label="Full Name" name="name" value={formData.name} error={formErrors.name} onChange={handleInputChange} placeholder="Your full name" readOnly={!!user?.full_name} />
+                  <InputField label="Phone Number" name="phone" type="tel" value={formData.phone} error={formErrors.phone} onChange={handleInputChange} placeholder="10-digit number" maxLength={10} readOnly={!!user?.username} />
+                  <InputField label="Father's Name" name="fatherName" value={formData.fatherName} error={formErrors.fatherName} onChange={handleInputChange} placeholder="Father's full name" />
+                  <InputField label="Father's Mobile Number" name="fatherNumber" type="tel" value={formData.fatherNumber} error={formErrors.fatherNumber} onChange={handleInputChange} placeholder="10-digit number" maxLength={10} />
+                  <InputField label="College Name" name="college" value={formData.college} error={formErrors.college} onChange={handleInputChange} placeholder="Your college / institute" />
+                  <InputField label="Course Name" name="course" value={formData.course} error={formErrors.course} onChange={handleInputChange} placeholder="Your course (e.g. B.Tech, MBA)" />
                 </div>
               </motion.div>
             )}

@@ -1,12 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { fetchMyScheduledVisits } from '../../property'; // Adjust import path
-import { Calendar, Clock, MapPin } from 'lucide-react';
+import { Calendar, Clock, MapPin, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '../../hooks/useAuth';
 
 const ScheduledVisits = () => {
-    const dispatch = useDispatch();
     const { user, token } = useAuth();
     const [visits, setVisits] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -18,10 +15,9 @@ const ScheduledVisits = () => {
 
             try {
                 setLoading(true);
-                const result = await dispatch(fetchMyScheduledVisits({
-                    userId: user.id,
-                    token
-                })).unwrap();
+                const res = await fetch(`/api/visits/book?userId=${user.id}&token=${token}`);
+                if (!res.ok) throw new Error('Failed to fetch scheduled visits');
+                const result = await res.json();
                 setVisits(result.data || []);
             } catch (err) {
                 console.error("Failed to fetch scheduled visits:", err);
@@ -34,7 +30,7 @@ const ScheduledVisits = () => {
         if (user && token) {
             loadVisits();
         }
-    }, [dispatch, user, token]);
+    }, [user, token]);
 
     if (loading) {
         return (
@@ -90,12 +86,20 @@ const ScheduledVisits = () => {
                                     <h3 className="font-semibold text-lg text-gray-900">
                                         {propertyAttr?.name || 'Property Name Unavailable'}
                                     </h3>
-                                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${attr.status === 'confirmed' ? 'bg-green-100 text-green-800' :
-                                        attr.status === 'cancelled' ? 'bg-red-100 text-red-800' :
-                                            'bg-yellow-100 text-yellow-800'
+                                    <div className="flex flex-col items-end gap-1">
+                                        <span className={`px-2 py-1 text-xs font-bold rounded-full ${
+                                            attr.visitType === 'premium' ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                                         }`}>
-                                        {attr.status ? attr.status.charAt(0).toUpperCase() + attr.status.slice(1) : 'Pending'}
-                                    </span>
+                                            {attr.visitType === 'premium' ? 'Premium Visit' : 'Free Visit'}
+                                        </span>
+                                        <span className={`px-2 py-0.5 text-[10px] font-medium rounded-full ${
+                                            attr.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                                            attr.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                                'bg-yellow-100 text-yellow-800'
+                                            }`}>
+                                            {attr.status ? attr.status.charAt(0).toUpperCase() + attr.status.slice(1) : 'Pending'}
+                                        </span>
+                                    </div>
                                 </div>
 
                                 <p className="text-gray-500 text-sm mt-1 mb-3">
@@ -105,12 +109,18 @@ const ScheduledVisits = () => {
                                 <div className="flex flex-wrap gap-4 text-sm text-gray-600">
                                     <div className="flex items-center gap-1">
                                         <Calendar size={16} className="text-indigo-500" />
-                                        <span>{attr.visitDate}</span>
+                                        <span>{new Date(attr.visitDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                                     </div>
                                     <div className="flex items-center gap-1">
                                         <Clock size={16} className="text-indigo-500" />
-                                        <span>{attr.time_slot}</span>
+                                        <span>{attr.time_slot_label || attr.time_slot}</span>
                                     </div>
+                                    {attr.visitType === 'premium' && (
+                                        <div className="flex items-center gap-1 text-indigo-600 font-medium bg-indigo-50 px-2 py-0.5 rounded-md">
+                                            <Star size={14} />
+                                            <span>Payment: {attr.paymentStatus === 'paid' ? 'Paid' : 'Pending'}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {property?.id && (

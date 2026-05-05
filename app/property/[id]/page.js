@@ -12,7 +12,7 @@ import {
   FaArrowLeft, FaMapMarkerAlt, FaBed, FaCheckCircle,
   FaPhoneAlt, FaWhatsapp, FaHeart, FaRegHeart, FaShare, FaWifi, FaTshirt,
   FaShieldAlt, FaBus, FaDumbbell, FaParking, FaBook, FaSnowflake,
-  FaChevronLeft, FaChevronRight, FaExpand,
+  FaChevronLeft, FaChevronRight, FaExpand, FaCalendarAlt,
   FaChevronDown, FaChevronUp, FaPlay, FaMap, FaTimes,
   FaUniversity, FaSubway, FaHospital, FaShoppingBag, FaSearch,
   FaCheckDouble
@@ -21,6 +21,7 @@ import { MdApartment } from 'react-icons/md';
 import { BASE_URL } from '../../../lib/endpoints';
 import { motion, AnimatePresence } from 'framer-motion';
 import MaxWidthWrapper from '../../../app/components/MaxWidthWrapper';
+import ScheduleVisitSheet from '../../components/ScheduleVisitSheet';
 
 const REAL_API = 'https://api.dreamprovider.in/';
 
@@ -53,28 +54,11 @@ const PropertyDetailPage = () => {
   const [nearbySearchText, setNearbySearchText] = useState('');
 
   // Schedule Visit State
-  const [isVisitModalOpen, setIsVisitModalOpen] = useState(false);
-  const [visitDate, setVisitDate] = useState('');
-  const [visitTime, setVisitTime] = useState('');
+  const [isVisitSheetOpen, setIsVisitSheetOpen] = useState(false);
 
   // SelectRoom / Pricing Sheet State
   const [isRoomSheetOpen, setIsRoomSheetOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
-
-  const handleConfirmVisit = () => {
-    if (!visitDate || !visitTime) {
-      alert('Please select both a date and time for your visit.');
-      return;
-    }
-    const dateObj = new Date(visitDate);
-    const formattedDate = dateObj.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-    const message = `Hello, I would like to schedule a visit for ${property?.attributes?.name} (${id}) on ${formattedDate} at ${visitTime}.`;
-    const phoneNumber = '+917303831326';
-    const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-    setIsVisitModalOpen(false);
-    setVisitDate(''); setVisitTime('');
-  };
 
   const getDates = () => {
     const dates = [];
@@ -205,7 +189,7 @@ const PropertyDetailPage = () => {
       if (callback) callback();
       dispatch(revealProperty(JSON.stringify({
         data: { property: parseInt(id), users_permissions_user: user?.id, action: action, token: token }
-      }))).catch(() => {});
+      }))).catch(() => { });
       return;
     }
     try {
@@ -292,8 +276,8 @@ const PropertyDetailPage = () => {
   const pricingGroups = Array.isArray(attr.property_pricing)
     ? attr.property_pricing
     : Array.isArray(attr.property_pricing?.data)
-    ? attr.property_pricing.data.map(d => ({ id: d.id, ...d.attributes }))
-    : [];
+      ? attr.property_pricing.data.map(d => ({ id: d.id, ...d.attributes }))
+      : [];
 
   const PropertyHeaderCard = () => (
     <div className="bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl p-6 mb-6 shadow-xl relative overflow-hidden group">
@@ -469,45 +453,7 @@ const PropertyDetailPage = () => {
     );
   };
 
-  const ScheduleVisitCard = ({ mobile = false }) => (
-    <div className={`${mobile ? 'block' : 'hidden lg:block'} bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg p-6`}>
-      <h3 className="text-lg font-bold text-indigo-900 mb-4 flex items-center">
-        <FaCheckCircle className="mr-2 text-indigo-500" /> Schedule a Visit
-      </h3>
-      <div className="space-y-4">
-        <div>
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Select Date</label>
-          <div className="flex overflow-x-auto pb-2 gap-2 scrollbar-hide -mx-2 px-2">
-            {datesList.map((date, index) => {
-              const dateStr = date.toISOString().split('T')[0];
-              const isSelected = visitDate === dateStr;
-              const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
-              const dayNum = date.getDate();
-              return (
-                <button key={index} onClick={() => setVisitDate(dateStr)} className={`flex flex-col items-center justify-center min-w-[50px] h-[60px] rounded-xl border transition-all flex-shrink-0 ${isSelected ? 'bg-indigo-600 text-white border-indigo-600 shadow-md transform scale-105' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}>
-                  <span className={`text-[10px] uppercase ${isSelected ? 'text-indigo-200' : 'text-gray-400'}`}>{dayName}</span>
-                  <span className="text-sm font-bold">{dayNum}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        <div>
-          <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">Select Time</label>
-          <div className="grid grid-cols-3 gap-2">
-            {timeSlots.map((slot, index) => (
-              <button key={index} onClick={() => setVisitTime(slot)} className={`py-2 px-1 rounded-lg text-[10px] font-bold border transition-all ${visitTime === slot ? 'bg-indigo-50 text-indigo-700 border-indigo-200 ring-1 ring-indigo-500' : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300'}`}>
-                {slot}
-              </button>
-            ))}
-          </div>
-        </div>
-        <button onClick={handleConfirmVisit} disabled={!visitDate || !visitTime} className={`w-full py-3 text-sm font-bold rounded-xl shadow-lg flex items-center justify-center gap-2 transition-transform active:scale-95 ${!visitDate || !visitTime ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-green-200'}`}>
-          <FaWhatsapp size={18} /> Confirm via WhatsApp
-        </button>
-      </div>
-    </div>
-  );
+  // (ScheduleVisitCard removed – replaced by ScheduleVisitSheet)
 
   return (
     <div className="relative min-h-screen bg-gray-50 pb-12">
@@ -554,8 +500,11 @@ const PropertyDetailPage = () => {
               <div className="block lg:hidden space-y-6">
                 <PropertyHeaderCard />
                 <PricingSelectButton />
-                <button onClick={() => setIsVisitModalOpen(true)} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-xl shadow-indigo-300 transform active:scale-95 transition-all">
-                  Schedule a Visit
+                <button
+                  onClick={() => setIsVisitSheetOpen(true)}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-bold text-lg shadow-xl shadow-emerald-300 transform active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <FaCalendarAlt size={20} /> Schedule a Visit
                 </button>
               </div>
 
@@ -591,7 +540,20 @@ const PropertyDetailPage = () => {
                 <PricingSelectButton />
               </div>
               <div className="sticky top-24 space-y-6 z-1000">
-                <ScheduleVisitCard />
+                <div className="bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg p-6">
+                  <h3 className="text-lg font-black text-gray-900 mb-3 flex items-center gap-2">
+                    <FaCalendarAlt className="text-emerald-500" size={18} /> Schedule a Visit
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4 leading-relaxed">
+                    Book a free or premium visit to tour this property at your preferred time.
+                  </p>
+                  <button
+                    onClick={() => setIsVisitSheetOpen(true)}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-emerald-200 active:scale-95 hover:from-emerald-600 hover:to-emerald-700 transition-all flex items-center justify-center gap-2"
+                  >
+                    <FaCalendarAlt size={16} /> Choose Date & Time
+                  </button>
+                </div>
                 <div className="bg-white/80 backdrop-blur-lg border border-white/60 rounded-3xl shadow-lg p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Details</h3>
                   <div className="space-y-4">
@@ -609,22 +571,6 @@ const PropertyDetailPage = () => {
           </div>
         </div>
       </MaxWidthWrapper>
-
-      {/* Mobile Visit Modal */}
-      <AnimatePresence>
-        {isVisitModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-end sm:hidden">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsVisitModalOpen(false)} />
-            <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }} transition={{ type: "spring", damping: 25, stiffness: 300 }} className="relative w-full">
-              <div className="bg-white rounded-t-3xl p-6 shadow-2xl">
-                <div className="w-12 h-1.5 bg-gray-200 rounded-full mx-auto mb-6" />
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Schedule Visit</h3>
-                <ScheduleVisitCard mobile={true} />
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* =================== SELECT ROOM BOTTOM SHEET =================== */}
       <AnimatePresence>
@@ -675,11 +621,10 @@ const PropertyDetailPage = () => {
                             <button
                               key={option.id}
                               onClick={() => setSelectedOption(option)}
-                              className={`w-full text-left rounded-2xl border-2 p-4 transition-all duration-200 ${
-                                isSelected
-                                  ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
-                                  : 'border-gray-100 bg-white hover:border-indigo-200 hover:shadow-sm'
-                              }`}
+                              className={`w-full text-left rounded-2xl border-2 p-4 transition-all duration-200 ${isSelected
+                                ? 'border-indigo-500 bg-indigo-50 shadow-md shadow-indigo-100'
+                                : 'border-gray-100 bg-white hover:border-indigo-200 hover:shadow-sm'
+                                }`}
                             >
                               {/* Card Header */}
                               <div className="flex items-start justify-between mb-3">
@@ -741,9 +686,8 @@ const PropertyDetailPage = () => {
                 <button
                   onClick={handleWhatsAppEnquiry}
                   disabled={!selectedOption}
-                  className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
-                    selectedOption ? 'bg-[#25D366] text-white shadow-md shadow-green-200 hover:bg-[#20bd5a] active:scale-95' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
+                  className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${selectedOption ? 'bg-[#25D366] text-white shadow-md shadow-green-200 hover:bg-[#20bd5a] active:scale-95' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
                   title="WhatsApp Enquiry"
                 >
                   <FaWhatsapp size={20} />
@@ -751,17 +695,17 @@ const PropertyDetailPage = () => {
                 <button
                   onClick={handleBookNow}
                   disabled={!selectedOption}
-                  className={`flex-1 py-3.5 rounded-xl font-black text-base transition-all flex items-center justify-center gap-2 ${
-                    selectedOption
-                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-95'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
+                  className={`flex-1 py-3.5 rounded-xl font-black text-base transition-all flex items-center justify-center gap-2 ${selectedOption
+                    ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white shadow-lg shadow-indigo-200 hover:from-indigo-700 hover:to-indigo-800 active:scale-95'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
                 >
                   {selectedOption
                     ? `Book Now — ₹${(attr.booking_amount || 0).toLocaleString('en-IN')}`
                     : 'Select a Room to Continue'
                   }
                 </button>
+
               </div>
             </motion.div>
           </div>
@@ -799,6 +743,16 @@ const PropertyDetailPage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* =================== SCHEDULE VISIT SHEET =================== */}
+      <ScheduleVisitSheet
+        isOpen={isVisitSheetOpen}
+        onClose={() => setIsVisitSheetOpen(false)}
+        property={property}
+        propertyId={parseInt(id)}
+        token={token}
+        user={user}
+      />
     </div>
   );
 };
