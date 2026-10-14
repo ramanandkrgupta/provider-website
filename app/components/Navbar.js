@@ -208,6 +208,7 @@ const Navbar = () => {
           <li><Link href="/college" className={navLinkClasses} onClick={handleLinkClick}>College</Link></li>
           {/* <li><Link href="/blogs" className={navLinkClasses} onClick={handleLinkClick}>Blogs</Link></li> */}
           <li><Link href="/about-us" className={navLinkClasses} onClick={handleLinkClick}>About Us</Link></li>
+          <li><Link href="/internship" className={navLinkClasses} onClick={handleLinkClick}>Internship</Link></li>
           <div className="flex flex-col gap-4 w-4/5 max-w-xs pt-4 mt-4 border-t border-gray-200">
             <a
               href="https://super-rent.providerapp.in"
