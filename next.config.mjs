@@ -145,6 +145,20 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/internship',
+        destination: 'https://internship.providerapp.in',
+        permanent: true,
+      },
+      {
+        source: '/internship/:path*',
+        destination: 'https://internship.providerapp.in/:path*',
+        permanent: true,
+      },
+    ];
+  },
 };
 
 // Use module.exports for .js files
